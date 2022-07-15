@@ -1,25 +1,25 @@
-#define encCLK  3
-#define encDT  2
-#define encSW  4
+#include "Keyboard.h"
+#include "Mouse.h"
 
-bool flag = 0;
+#define encCLK  3
+#define encDT  4
+#define encSW  2
+
+short int  flag = 0;
 bool oldencCLK;
 bool oldencDT;
 
-int ledizq = 5;
-int ledder = 6;
 int encEdo = 0;
 
 void setup() 
 {
   Serial.begin (9600);
+  Keyboard.begin();
+  Mouse.begin();
   
   pinMode (encCLK, INPUT);
   pinMode (encDT, INPUT);
   pinMode (encSW, INPUT_PULLUP);
-
-  pinMode(ledizq, OUTPUT);
-  pinMode(ledder, OUTPUT);
 
   
   oldencCLK = digitalRead (encCLK);
@@ -27,58 +27,73 @@ void setup()
 }
 
 bool detect_mov(bool *der, bool *izq);
+void mueve_encoder(bool mov);
 
-
+void encoderButtonPressed()
+{
+  Serial.println("presionado");
+  Keyboard.print("Hello!");
+}
 
 void loop() 
 {
-  
+  attachInterrupt(digitalPinToInterrupt(2),encoderButtonPressed,FALLING); 
   bool der = LOW, izq =LOW;
   
   if (detect_mov(&der, &izq) == true)
   {
-    if(flag == 0)
-    {
-      if(der == HIGH)
-        Serial.println("izquierda");
-      else
-        Serial.println("derecha");
-      digitalWrite(ledder, der);
-      digitalWrite(ledizq, izq);
-    }
-    flag = !flag;
+     if(flag % 2 == 0)
+     {
+       mueve_encoder(der);
+       flag = 0;
+     }
+     flag++;   
   }
+  
   
 }
 
+void mueve_encoder(bool mov)
+{
+  
+  Serial.println(flag);
+  if(mov == HIGH)
+  {
+    //Serial.println("izquierda");
+    Mouse.move(-10, 0);
+  }
+  else
+  {
+    //Serial.println("derecha");
+    Mouse.move(10, 0);
+  }
+}
+
+
 bool detect_mov(bool *der, bool *izq)
 {
- bool newencCLK = digitalRead (encCLK);
- bool newencDT = digitalRead (encDT);
+ bool newencCLK;
+ bool newencDT;
+ bool mov;
  
- if(newencCLK == oldencCLK && newencDT == oldencDT)
-    return false;
- 
- 
- if(oldencCLK == LOW)
+ if(oldencCLK == LOW && oldencDT == LOW)
  {
-    if(newencCLK == LOW)
-       *der = HIGH;
-    else
-      *der = LOW;
+    newencDT = digitalRead (encDT);
+    newencCLK = digitalRead (encCLK);
+    mov = newencDT;
  }
  else
-   if(oldencCLK == HIGH)
-   {
-      
-      if(newencCLK == HIGH)
-         *der = HIGH;
-      else
-        *der = LOW;
-   }
- //Serial.println(*der);
- *izq = !*der;
- oldencCLK = digitalRead(encCLK);
- oldencDT = digitalRead(encDT);
+ { 
+    newencCLK = digitalRead (encCLK);
+    newencDT = digitalRead (encDT);
+    mov = newencCLK;
+ }
+ 
+ if(oldencCLK == newencCLK && oldencDT == newencDT)
+  return false;
+ 
+ *der = mov;        
+ oldencCLK = newencCLK;
+ oldencDT = newencDT;
  return true;
 }

@@ -1,3 +1,0 @@
-Encoder rotativo
-Display Pantalla Oled 128x32
-	
